@@ -1,1 +1,2 @@
 # cmsdev
+CMSiMDE development repository

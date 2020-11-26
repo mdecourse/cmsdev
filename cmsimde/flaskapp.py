@@ -29,6 +29,8 @@ import sys
 import bs4
 # for ssavePage and savePage
 import shutil
+# for merge_sequence
+from difflib import SequenceMatcher
 import inspect
 # 針對單一頁面有許多 html 標註時, 增大遞迴圈數設定
 sys.setrecursionlimit(1000000)
@@ -59,6 +61,7 @@ image_dir = _curdir + "/images/"
 initobj = init.Init()
 # 取 init.py 中 Init 類別中的 class uwsgi 變數 (static variable) 設定
 uwsgi = init.Init.uwsgi
+collab = init.Init.collab
 ip = init.Init.ip
 port = init.Init.port
 
@@ -2282,7 +2285,20 @@ def ssavePage():
     with open(config_dir + "content.htm", "w", encoding="utf-8") as file:
         for index in range(len(head)):
             if index == int(page_order):
-                file.write(page_content)
+                if collab == False:
+                    # single user mode, write the editor content only
+                    file.write(page_content)
+                else:
+                    # make orig and new html content into list
+                    newSoup = bs4.BeautifulSoup(page_content, "html.parser")
+                    newList =[str(tag) for tag in newSoup.find_all()]
+                    oldSoup = bs4.BeautifulSoup(page[index], "html.parser")
+                    oldList =[str(tag) for tag in oldSoup.find_all()]
+                    mergedList = merge_sequences(oldList, newList)
+                    newContent = ""
+                    for i in range(len(mergedList)):
+                        newContent += mergedList[i]
+                    file.write(newContent)
             else:
                 file.write("<h"+str(level[index])+ ">" + str(head[index]) + "</h" + \
                               str(level[index])+">"+str(page[index]))
@@ -2424,5 +2440,22 @@ def unique(items):
     return keep
 
 
+
+# for merging two lists and preserve the duplicated elements
+def merge_sequences(seq1,seq2):
+    sm=SequenceMatcher(a=seq1,b=seq2)
+    res = []
+    for (op, start1, end1, start2, end2) in sm.get_opcodes():
+        if op == 'equal' or op=='delete':
+            #This range appears in both sequences, or only in the first one.
+            res += seq1[start1:end1]
+        elif op == 'insert':
+            #This range appears in only the second sequence.
+            res += seq2[start2:end2]
+        elif op == 'replace':
+            #There are different ranges in each sequence - add both.
+            res += seq1[start1:end1]
+            res += seq2[start2:end2]
+    return res
 if __name__ == "__main__":
     app.run()

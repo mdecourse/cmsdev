@@ -79,6 +79,7 @@
 <v t="leo.20190515144238.26"><vh>syntaxhighlight2 (flaskapp.py)</vh></v>
 <v t="leo.20190515144238.27"><vh>tinymce_editor (flaskapp.py)</vh></v>
 <v t="leo.20190515144238.28"><vh>unique (flaskapp.py)</vh></v>
+<v t="leo.20201126101016.1"><vh>merge_sequence</vh></v>
 </v>
 <v t="leo.20190603204847.1"><vh>@path up_dir</vh>
 <v t="leo.20190603204921.1"><vh>@clean init.py</vh>
@@ -226,6 +227,8 @@ import sys
 import bs4
 # for ssavePage and savePage
 import shutil
+# for merge_sequence
+from difflib import SequenceMatcher
 import inspect
 # 針對單一頁面有許多 html 標註時, 增大遞迴圈數設定
 sys.setrecursionlimit(1000000)
@@ -256,6 +259,9 @@ image_dir = _curdir + "/images/"
 initobj = init.Init()
 # 取 init.py 中 Init 類別中的 class uwsgi 變數 (static variable) 設定
 uwsgi = init.Init.uwsgi
+collab = init.Init.collab
+ip = init.Init.ip
+port = init.Init.port
 
 # 必須先將 download_dir 設為 static_folder, 然後才可以用於 download 方法中的 app.static_folder 的呼叫
 app = Flask(__name__)
@@ -356,7 +362,9 @@ def edit_page(edit):
     return '''
     &lt;br /&gt;
 &lt;!--&lt;script src="//cdn.tinymce.com/4/tinymce.min.js"&gt;&lt;/script&gt;--&gt;
-&lt;script src="/static/tinymce4/tinymce/tinymce.min.js"&gt;&lt;/script&gt;
+&lt;!--&lt;script src="/static/tinymce4/tinymce/tinymce.min.js"&gt;&lt;/script&gt;--&gt;
+&lt;!-- for ipv6 to work --&gt;
+&lt;script src="https://mde.tw/cmstemplate/cmsimde/static/tinymce4/tinymce/tinymce.min.js"&gt;&lt;/script&gt;
 &lt;script src="/static/tinymce4/tinymce/plugins/sh4tinymce/plugin.min.js"&gt;&lt;/script&gt;
 &lt;link rel = "stylesheet" href = "/static/tinymce4/tinymce/plugins/sh4tinymce/style/style.css"&gt;
 &lt;script&gt;
@@ -2131,7 +2139,20 @@ def ssavePage():
     with open(config_dir + "content.htm", "w", encoding="utf-8") as file:
         for index in range(len(head)):
             if index == int(page_order):
-                file.write(page_content)
+                if collab == False:
+                    # single user mode, write the editor content only
+                    file.write(page_content)
+                else:
+                    # make orig and new html content into list
+                    newSoup = bs4.BeautifulSoup(page_content, "html.parser")
+                    newList =[str(tag) for tag in newSoup.find_all()]
+                    oldSoup = bs4.BeautifulSoup(page[index], "html.parser")
+                    oldList =[str(tag) for tag in oldSoup.find_all()]
+                    mergedList = merge_sequences(oldList, newList)
+                    newContent = ""
+                    for i in range(len(mergedList)):
+                        newContent += mergedList[i]
+                    file.write(newContent)
             else:
                 file.write("&lt;h"+str(level[index])+ "&gt;" + str(head[index]) + "&lt;/h" + \
                               str(level[index])+"&gt;"+str(page[index]))
@@ -2275,6 +2296,7 @@ img.add_border {
             count[item] += 1
             keep.append(str(item) + "_" + str(count[item]))
     return keep
+
 
 
 </t>
@@ -2680,7 +2702,7 @@ if uwsgi:
     application = flaskapp.app
 else:
     # on localhost, on Linux or Mac need to use python3 wsgi.py to execute
-    flaskapp.app.run(host='127.0.0.1', port=9443, debug=True, ssl_context=context)
+    flaskapp.app.run(host=ip, port=port, debug=True, ssl_context=context)
 @language python
 @tabwidth -4
 </t>
@@ -2694,6 +2716,9 @@ context.load_cert_chain('localhost.crt', 'localhost.key')
 
 # get uwsgi variable value of flaskapp.py
 uwsgi = flaskapp.uwsgi
+ip = flaskapp.ip
+port = flaskapp.port
+
 </t>
 <t tx="leo.20190603204847.1"></t>
 <t tx="leo.20190603204921.1">@others
@@ -2713,7 +2738,10 @@ config_dir = _curdir + "/config/"
 <t tx="leo.20190603204931.2">class Init(object):
     # uwsgi as static class variable, can be accessed by Init.uwsgi
     uwsgi = False
+    collab = False
     site_title = "CMSiMDE"
+    ip = "127.0.0.1"
+    port = 9443
     @others
 </t>
 <t tx="leo.20190603204931.3">def __init__(self):
@@ -2917,6 +2945,22 @@ spur(cx+pr1+pr2+pr2+pr3, cy, m, n3, pa, 180-180/n3+(180-180/n2)*n2/n3)
     # 若 template 檔案名稱與位於外部 templates 目錄中的檔案同名, 則取外部的 template
    # return render_template('g1index.html', user=user)
 </t>
+<t tx="leo.20201126101016.1"># for merging two lists and preserve the duplicated elements
+def merge_sequences(seq1,seq2):
+    sm=SequenceMatcher(a=seq1,b=seq2)
+    res = []
+    for (op, start1, end1, start2, end2) in sm.get_opcodes():
+        if op == 'equal' or op=='delete':
+            #This range appears in both sequences, or only in the first one.
+            res += seq1[start1:end1]
+        elif op == 'insert':
+            #This range appears in only the second sequence.
+            res += seq2[start2:end2]
+        elif op == 'replace':
+            #There are different ranges in each sequence - add both.
+            res += seq1[start1:end1]
+            res += seq2[start2:end2]
+    return res</t>
 <t tx="yen.20200710111924.1">def checkMath():
     outstring = '''
 &lt;!-- 啟用 LaTeX equations 編輯 --&gt;
@@ -2928,6 +2972,7 @@ spur(cx+pr1+pr2+pr2+pr3, cy, m, n3, pa, 180-180/n3+(180-180/n2)*n2/n3)
   &lt;script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"&gt;&lt;/script&gt;--&gt;
     '''
     return outstring
-    </t>
+    
+</t>
 </tnodes>
 </leo_file>
