@@ -2291,9 +2291,19 @@ def ssavePage():
                 else:
                     # make orig and new html content into list
                     newSoup = bs4.BeautifulSoup(page_content, "html.parser")
-                    newList =[str(tag) for tag in newSoup.find_all()]
-                    oldSoup = bs4.BeautifulSoup(page[index], "html.parser")
-                    oldList =[str(tag) for tag in oldSoup.find_all()]
+                    # iframe tag have to insert into p tag
+                    newList =[str(tag) for tag in newSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'table'])]
+                    #print("============ new List ==========")
+                    #print(newList)
+                    #print("============ new List ==========")
+                    # 必須將 pre 的內容跳行換為 <br />
+                    oldPage = page[index]
+                    oldSoup = bs4.BeautifulSoup(oldPage, "html.parser")
+                    # iframe tag have to insert into p tag
+                    oldList =[snTosr(tag) for tag in oldSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'table'])]
+                    #print("============ old List ==========")
+                    #print(oldList)
+                    #print("============ old List ==========")
                     mergedList = merge_sequences(oldList, newList)
                     newContent = ""
                     for i in range(len(mergedList)):
@@ -2442,6 +2452,7 @@ def unique(items):
 
 
 # for merging two lists and preserve the duplicated elements
+'''
 def merge_sequences(seq1,seq2):
     sm=SequenceMatcher(a=seq1,b=seq2)
     res = []
@@ -2457,5 +2468,51 @@ def merge_sequences(seq1,seq2):
             res += seq1[start1:end1]
             res += seq2[start2:end2]
     return res
+
+'''
+def merge_sequences(list1, list2):
+    # Exit if list2 is empty
+    if not len(list2):
+        return list1
+    # Copy the content of list2 into merged list
+    merged = list2.copy()
+
+    # Create a list for storing temporary elements
+    elements = []
+    # Create a variable for storing previous element found in both lists
+    previous = None
+
+    # Loop through the elements of list1
+    for e in list1:
+        # Append the element to "elements" list if it's not in list2
+        if e not in merged:
+            elements.append(e)
+
+        # If it is in list2 (is a common element)
+        else:
+
+            # Loop through the stored elements
+            for x in elements:
+                # Insert all the stored elements after the previous common element
+                merged.insert(previous and merged.index(previous) + 1 or 0, x)
+            # Save new common element to previous
+            previous = e
+            # Empty temporary elements
+            del elements[:]
+
+    # If no more common elements were found but there are elements still stored
+    if len(elements):
+        # Insert them after the previous match
+        for e in elements:
+            merged.insert(previous and merged.index(previous) + 1 or 0, e)
+    # Return the merged list
+    return merged
+# replace slash n twith slash r
+def snTosr(tag):
+    tagStr = str(tag)
+    if tag.name == "pre":
+        return tagStr.replace("\n", "\r")
+    else:
+        return tagStr
 if __name__ == "__main__":
     app.run()
