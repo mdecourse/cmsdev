@@ -80,7 +80,7 @@
 <v t="leo.20190515144238.27"><vh>tinymce_editor (flaskapp.py)</vh></v>
 <v t="leo.20190515144238.28"><vh>unique (flaskapp.py)</vh></v>
 <v t="leo.20201126101016.1"><vh>merge_sequence</vh></v>
-<v t="leo.20201126195949.1"><vh>preBr</vh></v>
+<v t="leo.20201126195949.1"><vh>snTosr</vh></v>
 </v>
 <v t="leo.20190603204847.1"><vh>@path up_dir</vh>
 <v t="leo.20190603204921.1"><vh>@clean init.py</vh>
@@ -2151,7 +2151,6 @@ def ssavePage():
                     #print("============ new List ==========")
                     #print(newList)
                     #print("============ new List ==========")
-                    # 必須將 pre 的內容跳行換為 &lt;br /&gt;
                     oldPage = page[index]
                     oldSoup = bs4.BeautifulSoup(oldPage, "html.parser")
                     # iframe tag have to insert into p tag

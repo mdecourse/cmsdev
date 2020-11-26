@@ -2296,7 +2296,6 @@ def ssavePage():
                     #print("============ new List ==========")
                     #print(newList)
                     #print("============ new List ==========")
-                    # 必須將 pre 的內容跳行換為 <br />
                     oldPage = page[index]
                     oldSoup = bs4.BeautifulSoup(oldPage, "html.parser")
                     # iframe tag have to insert into p tag
