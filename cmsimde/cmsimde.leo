@@ -260,7 +260,6 @@ image_dir = _curdir + "/images/"
 initobj = init.Init()
 # 取 init.py 中 Init 類別中的 class uwsgi 變數 (static variable) 設定
 uwsgi = init.Init.uwsgi
-collab = init.Init.collab
 ip = init.Init.ip
 port = init.Init.port
 
@@ -2123,6 +2122,12 @@ def sitemap(edit):
 def ssavePage():
     """seperate save page function"""
     page_content = request.form['page_content']
+    # add an action for submit general save or collaborative csave
+    # default value for action is "save", this is for editor menu Save button
+    try:
+        action = request.form['action']
+    except:
+        action = "save"
     # when element_format : "html", need to remove the annoying comment to prevent brython exec
     page_content = page_content.replace('// &lt;![CDATA[', '')
     page_content = page_content.replace('// ]]&gt;', '')
@@ -2140,24 +2145,21 @@ def ssavePage():
     with open(config_dir + "content.htm", "w", encoding="utf-8") as file:
         for index in range(len(head)):
             if index == int(page_order):
-                if collab == False:
-                    # single user mode, write the editor content only
+                if action == "save":
                     file.write(page_content)
                 else:
                     # make orig and new html content into list
                     newSoup = bs4.BeautifulSoup(page_content, "html.parser")
-                    # iframe tag have to insert into p tag
-                    newList =[str(tag) for tag in newSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'table'])]
-                    #print("============ new List ==========")
-                    #print(newList)
-                    #print("============ new List ==========")
+                    newList =[str(tag) for tag in newSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'script', 'table'])]
+                    print("===== new =====")
+                    print(newList)
+                    print("===== new =====")
                     oldPage = page[index]
                     oldSoup = bs4.BeautifulSoup(oldPage, "html.parser")
-                    # iframe tag have to insert into p tag
-                    oldList =[snTosr(tag) for tag in oldSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'table'])]
-                    #print("============ old List ==========")
-                    #print(oldList)
-                    #print("============ old List ==========")
+                    oldList =[snTosr(tag) for tag in oldSoup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'pre', 'ol', 'ul', 'script', 'table'])]
+                    print("===== old =====")
+                    print(oldList)
+                    print("===== old =====")
                     mergedList = merge_sequences(oldList, newList)
                     newContent = ""
                     for i in range(len(mergedList)):
@@ -2278,13 +2280,15 @@ img.add_border {
                         editor_content + "&lt;/textarea&gt;&lt;input type='submit' value='save'&gt; \
                         &lt;/form&gt;&lt;/section&gt;&lt;/body&gt;&lt;/html&gt;"
     else:
-        # add viewpage button wilie single page editing
+        # add viewpage button while single page editing
         head, level, page = parse_content()
         outstring = editor + "&lt;div class='container'&gt;&lt;nav&gt;" + \
                         menu_input+"&lt;/nav&gt;&lt;section&gt;&lt;form method='post' action='/ssavePage'&gt; \
                         &lt;textarea class='simply-editor' name='page_content' cols='50' rows='15'&gt;" + \
                         editor_content + "&lt;/textarea&gt;&lt;input type='hidden' name='page_order' value='" + \
-                        str(page_order) + "'&gt;&lt;input type='submit' value='save'&gt;"
+                        str(page_order) + "'&gt;&lt;input type='submit' name='action' value='save'&gt;"
+        # add an extra collaborative save button
+        outstring += "&lt;input type='submit' name='action' value='csave'&gt;"
         outstring += '''&lt;input type=button onClick="location.href='/get_page/''' + \
                     head[page_order] + \
                     ''''" value='viewpage'&gt;&lt;/form&gt;&lt;/section&gt;&lt;/body&gt;&lt;/html&gt;'''
@@ -2306,7 +2310,6 @@ img.add_border {
             count[item] += 1
             keep.append(str(item) + "_" + str(count[item]))
     return keep
-
 
 
 </t>
@@ -3015,10 +3018,12 @@ def merge_sequences(list1, list2):
 <t tx="leo.20201126195949.1"># replace slash n twith slash r
 def snTosr(tag):
     tagStr = str(tag)
-    if tag.name == "pre":
+    # 只要編輯區標註有跳行內容者, 都需要轉換跳行符號
+    if tag.name in ["pre", "script"]:
         return tagStr.replace("\n", "\r")
     else:
-        return tagStr</t>
+        return tagStr
+</t>
 <t tx="yen.20200710111924.1">def checkMath():
     outstring = '''
 &lt;!-- 啟用 LaTeX equations 編輯 --&gt;
